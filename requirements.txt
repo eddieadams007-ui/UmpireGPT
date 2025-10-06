@@ -5,4 +5,3 @@ faiss-cpu==1.8.0
 pandas==2.2.2
 numpy==1.26.4
 python-dotenv==1.0.1
-sentence-transformers==2.7.0
