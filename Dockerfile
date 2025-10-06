@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set the working directory inside the container
 WORKDIR /umpiregpt
 
-# Copy requirements.txt from the project root to the WORKDIR (/src)
+# Copy requirements.txt from the project root to the WORKDIR (/umpiregpt)
 COPY requirements.txt .
 
 # Install dependencies
