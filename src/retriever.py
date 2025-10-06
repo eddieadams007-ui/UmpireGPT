@@ -2,6 +2,7 @@ import faiss
 import numpy as np
 import json
 from typing import Dict, List
+from sentence_transformers import SentenceTransformer
 
 class Retriever:
     def __init__(self, index_path: str, idmap_path: str):
@@ -15,16 +16,17 @@ class Retriever:
             for line in f:
                 id_val, doc_id = line.strip().split(',')
                 self.idmap[int(id_val)] = doc_id
+        # Initialize sentence transformer for embeddings
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
 
     def retrieve(self, query: str, k: int = 5) -> List[Dict]:
         """Retrieve top-k relevant documents using FAISS index."""
-        # Placeholder: Convert query to embedding (replace with actual embedding model)
-        # For now, simulate with a random vector (replace with real embedding logic)
-        query_vector = np.random.rand(1, self.index.d).astype('float32')
-       
+        # Convert query to embedding using sentence-transformers
+        query_vector = self.model.encode(query).reshape(1, -1).astype('float32')
+        
         # Search the FAISS index
         distances, indices = self.index.search(query_vector, k)
-       
+        
         # Map indices to document IDs and return relevant data
         relevant_docs = []
         with open('data/chunks/rules.chunks.jsonl', 'r') as f:
