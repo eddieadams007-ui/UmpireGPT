@@ -13,6 +13,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code from the src directory to the WORKDIR (/src)
 COPY src/ .
 
+# Copy the application code and the data directory with its structure
+COPY src/ .
+COPY data data/
+
 # Expose the port (e.g., 8000 for FastAPI)
 EXPOSE 8000
 
