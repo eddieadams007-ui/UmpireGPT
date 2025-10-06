@@ -1,11 +1,38 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:$COMMIT_SHA', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:latest', '.']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:latest']
-images:
-- 'us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:latest'
 substitutions:
-  _SERVICE: umpiregpt
-  _LOCATION: us-central1
-  _REPO: containers
+  _VERSION: v1  # Default version; can be overridden (e.g., v2)
+  _REGION: us-central1
+  _MEMORY: 256Mi
+  _CPU: 1
+
+steps:
+  # Build the Docker image for the specified version
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VERSION=${_VERSION}'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}'
+      - '.'
+    dir: '.'
+
+  # Push the image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'umpiregpt-${_VERSION}'
+      - '--image=gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--memory=${_MEMORY}'
+      - '--cpu=${_CPU}'
+      - '--allow-unauthenticated'
+    entrypoint: 'gcloud'
+
+images:
+  - 'gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}'
