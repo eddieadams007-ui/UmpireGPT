@@ -1,6 +1,7 @@
 import os
 from config import OPENAI_API_KEY, USE_OPENAI
 from openai import OpenAI
+import json
 
 class RAG:
     def __init__(self, data_path, index_path, meta):
@@ -12,11 +13,11 @@ class RAG:
     def generate_answer(self, query, context, idmap):
         if not context:
             return "No relevant context found."
-        
+       
         # Validate data_path and index_path existence (basic check)
         if not os.path.exists(self.data_path) or not os.path.exists(self.index_path):
             return "Data or index file not found."
-        
+       
         # Combine context into a prompt, including document IDs from idmap
         context_with_ids = []
         for doc in context:
@@ -24,7 +25,7 @@ class RAG:
             context_with_ids.append(f"ID: {doc_id}, Text: {doc['text']}")
         context_text = " ".join(context_with_ids)
         prompt = f"Based on the following context: {context_text}\nQuestion: {query}\nAnswer:"
-        
+       
         if USE_OPENAI and self.client:
             # Use OpenAI to generate answer
             response = self.client.chat.completions.create(
