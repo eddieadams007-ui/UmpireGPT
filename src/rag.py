@@ -12,7 +12,11 @@ class RAG:
     def generate_answer(self, query, context, idmap):
         if not context:
             return "No relevant context found."
-       
+        
+        # Validate data_path and index_path existence (basic check)
+        if not os.path.exists(self.data_path) or not os.path.exists(self.index_path):
+            return "Data or index file not found."
+        
         # Combine context into a prompt, including document IDs from idmap
         context_with_ids = []
         for doc in context:
