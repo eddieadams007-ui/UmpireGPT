@@ -23,13 +23,13 @@ os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
 async def query_rule(question: str):
     if not question:
         raise HTTPException(status_code=400, detail="No question provided")
-   
-    # Load idmap for mapping (though not used directly in this version)
+  
+    # Load idmap for mapping
     idmap = pd.read_csv("data/chunks/rules.idmap.csv")
-   
+  
     # Retrieve context using FAISS index
     context = retriever.retrieve(question)
-   
+  
     # Generate answer using RAG with meta data
     answer = rag.generate_answer(question, context, idmap)
     return {"question": question, "answer": answer if answer else "Sorry, I couldn't find a rule matching your query."}
