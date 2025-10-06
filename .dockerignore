@@ -1,20 +1,40 @@
-__pycache__
+# Ignore Python cache files
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
+
+# Ignore local environment and IDE files
+.env
+.venv/
 env/
 venv/
-env3/
-.venv/
+*.code-workspace
 .idea/
-.git
+.vscode/
+
+# Ignore Git files
+.git/
 .gitignore
-Dockerfile
-.dockerignore
-README.md
-*.md
+
+# Ignore build and test artifacts
+build/
+dist/
+*.egg-info/
 *.log
-tmp/
-temp/
-tests/
+pytest_cache/
+
+# Ignore temporary files
+*.swp
+*~
+*.bak
+
+# Ignore documentation and miscellaneous (optional, adjust based on needs)
+*.md
+LICENSE
+
+# Explicitly include critical files (optional, for clarity)
+!requirements.txt
+!Dockerfile
+!cloudbuild.yaml
+!src/
