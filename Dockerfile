@@ -8,7 +8,7 @@ WORKDIR /umpiregpt
 COPY requirements.txt .
 COPY .env .
 
-# Install system dependencies for sentence-transformers and faiss-cpu
+# Install system dependencies for faiss-cpu
 RUN apt-get update && apt-get install -y build-essential libopenblas-dev
 
 # Install dependencies
