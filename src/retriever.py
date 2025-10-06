@@ -3,14 +3,16 @@ import numpy as np
 import json
 from typing import Dict, List
 from openai import OpenAI
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, KB_PATH
 
 class Retriever:
     def __init__(self, index_path: str, idmap_path: str):
         self.index_path = index_path
         self.idmap_path = idmap_path
-        # Load FAISS index
+        # Load FAISS index with dimensionality validation
         self.index = faiss.read_index(index_path)
+        if self.index.d != 3072:  # Matches meta.json
+            raise ValueError(f"FAISS index dimension {self.index.d} does not match expected 3072")
         # Load idmap for mapping IDs to documents
         self.idmap = {}
         with open(idmap_path, 'r') as f:
@@ -26,13 +28,15 @@ class Retriever:
         # Convert query to embedding using OpenAI
         embedding_response = self.client.embeddings.create(input=[query], model=self.model)
         query_vector = np.array(embedding_response.data[0].embedding).reshape(1, -1).astype('float32')
-        
+        if query_vector.shape[1] != self.index.d:
+            raise ValueError(f"Query vector dimension {query_vector.shape[1]} does not match index dimension {self.index.d}")
+       
         # Search the FAISS index
         distances, indices = self.index.search(query_vector, k)
-        
+       
         # Map indices to document IDs and return relevant data
         relevant_docs = []
-        with open('data/chunks/rules.chunks.jsonl', 'r') as f:
+        with open(self.data_path, 'r') as f:  # Use self.data_path
             for i, line in enumerate(f):
                 if i in indices[0]:
                     doc = json.loads(line)
