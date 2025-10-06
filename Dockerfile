@@ -8,10 +8,11 @@ WORKDIR /umpiregpt
 COPY requirements.txt .
 COPY .env .
 
-# Install dependencies, with fallback for faiss-cpu if needed
-RUN apt-get update && apt-get install -y build-essential && \
-    pip install --no-cache-dir -r requirements.txt || \
-    (apt-get install -y libopenblas-dev && pip install --no-cache-dir faiss-cpu)
+# Install system dependencies for sentence-transformers and faiss-cpu
+RUN apt-get update && apt-get install -y build-essential libopenblas-dev
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code and data
 COPY src/ .
