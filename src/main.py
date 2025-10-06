@@ -1,25 +1,30 @@
-from flask import Flask, request, jsonify
-from .config import OPENAI_API_KEY, USE_OPENAI, KB_PATH, logger  # Import logger from config
-from .retriever import retrieve_answer
+from fastapi import FastAPI, HTTPException
+from rag import RAG
+from retriever import Retriever
+import pandas as pd
+import json
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    logger.info("Health check requested")
-    return jsonify({"status": "healthy", "kb_loaded": True, "kb_size": 1000})
+# Load meta.json for additional context
+with open('data/index/meta.json', 'r') as f:
+    meta = json.load(f)
 
-@app.route('/answer', methods=['POST'])
-def answer():
-    logger.info("Answer request received")
-    data = request.get_json()
-    query = data.get('query', '')
-    k = data.get('k', 5)
-    logger.info(f"Processing query: {query}, k={k}, KB_PATH={KB_PATH}")
-    response = retrieve_answer(query, k, KB_PATH, OPENAI_API_KEY, USE_OPENAI)
-    logger.info(f"Response: {response}")
-    return jsonify(response)
+# Initialize RAG and Retriever with file paths
+rag = RAG(data_path="data/chunks/rules.chunks.jsonl", index_path="data/index/rules.faiss", meta=meta)
+retriever = Retriever(index_path="data/index/rules.faiss", idmap_path="data/chunks/rules.idmap.csv")
 
-if __name__ == '__main__':
-    logger.info("Starting app in debug mode")
-    app.run(host='0.0.0.0', port=8080)
+@app.get("/query")
+async def query_rule(question: str):
+    if not question:
+        raise HTTPException(status_code=400, detail="No question provided")
+    
+    # Load idmap for mapping
+    idmap = pd.read_csv("data/chunks/rules.idmap.csv")
+    
+    # Retrieve context using FAISS index
+    context = retriever.retrieve(question)
+    
+    # Generate answer using RAG with meta data
+    answer = rag.generate_answer(question, context, idmap=idmap)
+    return {"question": question, "answer": answer if answer else "Sorry, I couldn't find a rule matching your query."}
