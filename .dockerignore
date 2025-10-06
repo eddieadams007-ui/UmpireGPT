@@ -5,7 +5,6 @@ __pycache__/
 *.pyd
 
 # Ignore local environment and IDE files
-.env
 .venv/
 env/
 venv/
@@ -29,12 +28,14 @@ pytest_cache/
 *~
 *.bak
 
-# Ignore documentation and miscellaneous (optional, adjust based on needs)
+# Ignore documentation (optional)
 *.md
 LICENSE
 
-# Explicitly include critical files (optional, for clarity)
+# Explicitly include critical files
 !requirements.txt
 !Dockerfile
 !cloudbuild.yaml
 !src/
+!data
+!.env  # Include .env for environment variables
