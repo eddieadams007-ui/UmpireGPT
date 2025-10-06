@@ -7,8 +7,10 @@ WORKDIR /umpiregpt
 # Copy requirements.txt from the project root to the WORKDIR (/umpiregpt)
 COPY requirements.txt .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies, with fallback for faiss-cpu if needed
+RUN apt-get update && apt-get install -y build-essential && \
+    pip install --no-cache-dir -r requirements.txt || \
+    (apt-get install -y libopenblas-dev && pip install --no-cache-dir faiss-cpu)
 
 # Copy the application code and the data directory with its structure
 COPY src/ .
