@@ -6,6 +6,6 @@ steps:
 images:
 - 'us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:latest'
 substitutions:
-  _SERVICE: umpgpt-v1
+  _SERVICE: umpiregpt
   _LOCATION: us-central1
   _REPO: containers
