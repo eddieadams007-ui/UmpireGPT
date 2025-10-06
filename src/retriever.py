@@ -21,10 +21,10 @@ class Retriever:
         # Placeholder: Convert query to embedding (replace with actual embedding model)
         # For now, simulate with a random vector (replace with real embedding logic)
         query_vector = np.random.rand(1, self.index.d).astype('float32')
-        
+       
         # Search the FAISS index
         distances, indices = self.index.search(query_vector, k)
-        
+       
         # Map indices to document IDs and return relevant data
         relevant_docs = []
         with open('data/chunks/rules.chunks.jsonl', 'r') as f:
