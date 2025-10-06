@@ -1,3 +1,7 @@
-gunicorn==21.2.0
-flask==3.0.3
+fastapi==0.115.0
+uvicorn==0.30.6
 openai==1.14.3
+faiss-cpu==1.8.0
+pandas==2.2.2
+numpy==1.26.4
+python-dotenv==1.0.1
