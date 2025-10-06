@@ -2,7 +2,8 @@ import faiss
 import numpy as np
 import json
 from typing import Dict, List
-from sentence_transformers import SentenceTransformer
+from openai import OpenAI
+from config import OPENAI_API_KEY
 
 class Retriever:
     def __init__(self, index_path: str, idmap_path: str):
@@ -16,13 +17,15 @@ class Retriever:
             for line in f:
                 id_val, doc_id = line.strip().split(',')
                 self.idmap[int(id_val)] = doc_id
-        # Initialize sentence transformer for embeddings
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Initialize OpenAI for embeddings
+        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.model = 'text-embedding-3-large'  # Matches 3072 dimension from meta.json
 
     def retrieve(self, query: str, k: int = 5) -> List[Dict]:
         """Retrieve top-k relevant documents using FAISS index."""
-        # Convert query to embedding using sentence-transformers
-        query_vector = self.model.encode(query).reshape(1, -1).astype('float32')
+        # Convert query to embedding using OpenAI
+        embedding_response = self.client.embeddings.create(input=[query], model=self.model)
+        query_vector = np.array(embedding_response.data[0].embedding).reshape(1, -1).astype('float32')
         
         # Search the FAISS index
         distances, indices = self.index.search(query_vector, k)
