@@ -1,32 +1,25 @@
 substitutions:
-  _VERSION: v1  # Default version; can be overridden (e.g., v2)
   _REGION: us-central1
   _MEMORY: 256Mi
   _CPU: 1
 
 steps:
-  # Build the Docker image for the specified version
+  # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '--build-arg'
-      - 'VERSION=${_VERSION}'
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}'
-      - '.'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt:v1', '.']
     dir: '.'
 
   # Push the image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}']
+    args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
 
   # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
       - 'run'
       - 'deploy'
-      - 'umpiregpt-${_VERSION}'
-      - '--image=gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}'
+      - 'umpiregpt-v1'
+      - '--image=gcr.io/$PROJECT_ID/umpiregpt:v1'
       - '--region=${_REGION}'
       - '--platform=managed'
       - '--memory=${_MEMORY}'
@@ -35,4 +28,4 @@ steps:
     entrypoint: 'gcloud'
 
 images:
-  - 'gcr.io/$PROJECT_ID/umpiregpt:${_VERSION}'
+  - 'gcr.io/$PROJECT_ID/umpiregpt:v1'
