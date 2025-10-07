@@ -22,7 +22,7 @@ class Retriever:
             for line in f:
                 fields = line.strip().split(',')
                 id_val, doc_id = fields[0], fields[-1]  # Use first (source_file) and last (new_id) columns
-                self.idmap[int(id_val.split('.')[0])] = doc_id
+                self.idmap[id_val] = doc_id  # Store source_file as key
         self.model = 'text-embedding-3-large'
 
     def retrieve(self, query: str, k: int = 5) -> List[Dict]:
