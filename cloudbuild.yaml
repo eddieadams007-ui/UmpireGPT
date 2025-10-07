@@ -1,7 +1,7 @@
 substitutions:
   _REGION: us-central1
-  _MEMORY: 256Mi
-  _CPU: 1
+  _MEMORY: "256Mi"
+  _CPU: "1"
 steps:
   # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
