@@ -6,4 +6,9 @@ pandas==2.2.3
 numpy==1.26.4
 python-dotenv==1.0.1
 packaging==24.2.0
+<<<<<<< HEAD
 streamlit==1.39.0
+=======
+streamlit==1.29.0
+requests==2.32.3
+>>>>>>> 8548f4b1269a025a36be3fbc83108894cb76a9a1
