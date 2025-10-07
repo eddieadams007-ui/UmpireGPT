@@ -8,12 +8,12 @@ from config import OPENAI_API_KEY, USE_OPENAI
 app = FastAPI()
 
 # Load meta.json for additional context
-with open('data/index/meta.json', 'r') as f:
+with open('data/chunks/index/meta.json', 'r') as f:
     meta = json.load(f)
 
 # Initialize RAG and Retriever with file paths
-rag = RAG(data_path="data/chunks/rules.chunks.jsonl", index_path="data/index/rules.faiss", meta=meta)
-retriever = Retriever(index_path="data/index/rules.faiss", idmap_path="data/chunks/rules.idmap.csv")
+rag = RAG(data_path="data/chunks/rules.chunks.jsonl", index_path="data/chunks/index/rules.faiss", meta=meta)
+retriever = Retriever(index_path="data/chunks/index/rules.faiss", idmap_path="data/chunks/rules.idmap.csv")
 
 # Set OpenAI API key from config (for production, use Secret Manager)
 import os
