@@ -14,6 +14,7 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
       - --set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest
+      - --port=8000
     env:
       - 'USE_OPENAI=true'
       - 'KB_PATH=data/chunks/rules.chunks.jsonl'
