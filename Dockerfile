@@ -1,7 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /umpiregpt
 COPY requirements.txt .
-COPY .env .
 RUN apt-get update && apt-get install -y build-essential libopenblas-dev
 RUN pip install --no-cache-dir --upgrade pip==25.2
 RUN pip install --no-cache-dir -r requirements.txt
