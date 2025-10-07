@@ -7,6 +7,7 @@ from config import OPENAI_API_KEY, KB_PATH
 
 class Retriever:
     def __init__(self, index_path: str, idmap_path: str):
+        self.data_path = KB_PATH  # Use KB_PATH from config
         self.index_path = index_path
         self.idmap_path = idmap_path
         # Load FAISS index with dimensionality validation
@@ -30,13 +31,13 @@ class Retriever:
         query_vector = np.array(embedding_response.data[0].embedding).reshape(1, -1).astype('float32')
         if query_vector.shape[1] != self.index.d:
             raise ValueError(f"Query vector dimension {query_vector.shape[1]} does not match index dimension {self.index.d}")
-       
+        
         # Search the FAISS index
         distances, indices = self.index.search(query_vector, k)
-       
+        
         # Map indices to document IDs and return relevant data
         relevant_docs = []
-        with open(self.data_path, 'r') as f:  # Use self.data_path
+        with open(self.data_path, 'r') as f:
             for i, line in enumerate(f):
                 if i in indices[0]:
                     doc = json.loads(line)
