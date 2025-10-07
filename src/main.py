@@ -8,7 +8,7 @@ from config import OPENAI_API_KEY, USE_OPENAI
 app = FastAPI()
 
 # Load meta.json for additional context
-with open('data/index/meta.json', 'r') as f:
+with open('data/chunks/index/meta.json', 'r') as f:
     meta = json.load(f)
 
 # Initialize RAG and Retriever with file paths
