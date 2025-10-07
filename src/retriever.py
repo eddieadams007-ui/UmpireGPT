@@ -19,6 +19,7 @@ class Retriever:
             raise ValueError(f"FAISS index dimension {self.index.d} does not match expected 3072")
         self.idmap = {}
         with open(idmap_path, 'r') as f:
+            next(f)  # Skip header row
             for line in f:
                 fields = line.strip().split(',')
                 id_val, doc_id = fields[0], fields[-1]  # Use first (source_file) and last (new_id) columns
@@ -38,6 +39,6 @@ class Retriever:
                 if i in indices[0]:
                     doc = json.loads(line)
                     doc['distance'] = float(distances[0][list(indices[0]).index(i)])
-                    doc['id'] = self.idmap.get(i, f"doc_{i}")
+                    doc['id'] = self.idmap.get(doc.get('source_file', str(i)), f"doc_{i}")
                     relevant_docs.append(doc)
         return relevant_docs
