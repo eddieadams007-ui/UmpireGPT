@@ -36,4 +36,3 @@ class Retriever:
             doc_id = self.id_map.get(idx, "Unknown")
             results.append({"doc_id": doc_id, "distance": float(dist)})
         return results
-
