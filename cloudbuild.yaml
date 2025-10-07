@@ -3,14 +3,11 @@ substitutions:
   _MEMORY: "256Mi"
   _CPU: "1"
 steps:
-  # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt:v1', '.']
     dir: '.'
-  # Push the image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
-  # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
       - 'run'
