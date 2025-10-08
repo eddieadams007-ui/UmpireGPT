@@ -1,6 +1,6 @@
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt:v1', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt:v1', '.', '--cache-from', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
   - name: gcr.io/cloud-builders/docker
     args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -15,6 +15,7 @@ steps:
       - --allow-unauthenticated
       - --set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest
       - --port=8000
+      - --min-instances=1
     env:
       - 'USE_OPENAI=true'
       - 'KB_PATH=data/chunks/rules.chunks.jsonl'
