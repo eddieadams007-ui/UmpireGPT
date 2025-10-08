@@ -1,6 +1,6 @@
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt-streamlit:v1', '-f', 'Dockerfile-streamlit', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt-streamlit:v1', '-f', 'Dockerfile-streamlit', '.', '--cache-from', 'gcr.io/$PROJECT_ID/umpiregpt-streamlit:v1']
   - name: gcr.io/cloud-builders/docker
     args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt-streamlit:v1']
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -14,3 +14,4 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
       - --port=8501
+      - --min-instances=1

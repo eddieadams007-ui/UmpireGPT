@@ -24,11 +24,11 @@ question = st.chat_input("Your question:", placeholder="What would you like to k
 
 # Handle submission
 if question:
-    with st.spinner("Checking the rulebook..."):
+    with st.spinner("Thinking..."):
         try:
             # Build context from last 3 messages
             context = "\n".join(
-                [f"Q: {msg['question']}\nA: {msg['answer']}"
+                [f"Q: {msg['question']}\nA: {msg['answer']}" 
                  for msg in st.session_state.chat_history[-3:]]
             )
             prompt = f"Previous conversation:\n{context}\n\nCurrent question: {question}"
@@ -38,9 +38,6 @@ if question:
             )
             response.raise_for_status()
             result = response.json()
-            if not result.get("answer"):
-                st.error("Received an empty response from the server. Please try again.")
-                raise ValueError("Empty answer in response")
             st.session_state.chat_history.append({
                 "question": question,
                 "answer": result["answer"]
@@ -48,5 +45,3 @@ if question:
             st.rerun()  # Refresh to show new message
         except requests.RequestException as e:
             st.error(f"Error: Couldn't reach the server ({str(e)}). Try again!")
-        except ValueError as e:
-            st.error(f"Error: Invalid response format ({str(e)}). Try again!")
