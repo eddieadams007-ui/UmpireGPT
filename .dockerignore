@@ -35,6 +35,7 @@ cloudbuild-streamlit.yaml
 !requirements.txt
 !requirements-backend.txt
 !Dockerfile
+!Dockerfile.base
 !cloudbuild.yaml
 !src/
 !data/
