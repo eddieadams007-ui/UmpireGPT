@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from .config import OPENAI_API_KEY, USE_OPENAI
 from openai import OpenAI
 
@@ -35,6 +36,23 @@ class RAG:
                 missing_slots.append(slot)
         return missing_slots
 
+    def standardize_rule_id(self, doc_id, doc, idmap):
+        """Standardize rule ID from idmap and doc (e.g., '2.00' and 'Balk' to 'Rule 2.00 (Balk)')."""
+        # Get rule and rule_sub from idmap
+        idx = list(idmap.index).index(int(doc_id.split('_')[-1]) if 'doc_' in doc_id else int(doc_id))
+        rule = idmap.iloc[idx].get('rule', '')
+        rule_sub = idmap.iloc[idx].get('rule_sub', '')
+        rule_sub = rule_sub.lstrip('0') if rule_sub.startswith('0.') else rule_sub  # Normalize '0.00' to '.00'
+        rule_id = f"{rule}{rule_sub}" if rule_sub else rule
+
+        # Get term from doc's define or c_verbatim
+        term = doc.get('define', doc.get('c_verbatim', '')).strip()
+        if not term:
+            term_match = re.search(r'– ([^\.:]+)', doc.get('text', ''))
+            term = term_match.group(1).strip() if term_match else ''
+
+        return f"Rule {rule_id} ({term})" if term else f"Rule {rule_id}"
+
     def generate_answer(self, query, context, idmap):
         if not context:
             return "Hey there! I couldn't find any relevant rules in the rulebook for that one. Can you clarify or ask something else?"
@@ -43,7 +61,8 @@ class RAG:
         context_with_ids = []
         for doc in context:
             doc_id = idmap.get(list(idmap.index).index(int(doc['id'].split('_')[-1]) if 'doc_' in doc['id'] else int(doc['id'])), doc['id'])
-            context_with_ids.append(f"Rule ID: {doc_id}, Text: {doc['text']}")
+            standardized_id = self.standardize_rule_id(doc_id, doc, idmap)
+            context_with_ids.append(f"{standardized_id}: {doc['text']}")
         context_text = " ".join(context_with_ids)
         intent = self.classify_intent(query)
         if intent == "scenario_based":
@@ -55,9 +74,9 @@ class RAG:
             "Use a clear, conversational tone, as if explaining to a player, parent, or volunteer coach. "
             "Be enthusiastic, use baseball lingo when appropriate, and make it feel like we're chatting on the diamond! "
             "Always prioritize fairness, safety, and player development. "
-            "If the question is a rule lookup, cite the rule number and paraphrase. "
-            "For philosophical questions, explain the rule's purpose in plain language with citations. "
-            "For opinion or storytelling, use teaching examples or admit if it's outside the rulebook. "
+            "If the question is a rule lookup, cite the exact rule number and term as provided in the context (e.g., Rule 2.00 (Balk)) and paraphrase the rule. Do not alter or invent IDs. "
+            "For philosophical questions, explain the rule's purpose in plain language with exact citations from the context. "
+            "For opinion or storytelling, use teaching examples or admit if it's outside the rulebook, citing rules if applicable. "
             "For off-topic questions, politely redirect to baseball rules or say it's not covered."
         )
         if intent == "rule_reference":
@@ -65,21 +84,21 @@ class RAG:
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Cite the specific rule number and paraphrase the rule in your answer."
+                f"Cite the specific rule number and term exactly as provided in the context (e.g., Rule 2.00 (Balk)) and paraphrase the rule in your answer. Do not alter or invent IDs."
             )
         elif intent == "philosophical":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Explain why the rule exists in plain language, citing rule numbers if possible."
+                f"Explain why the rule exists in plain language, citing exact rule numbers and terms from the context (e.g., Rule 2.00 (Balk))."
             )
         elif intent == "opinion":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Use teaching examples or stories from baseball to answer. If outside the rulebook, admit it but share a relevant case."
+                f"Use teaching examples or stories from baseball to answer. If outside the rulebook, admit it but share a relevant case, citing rules if applicable."
             )
         elif intent == "off_topic":
             return (
