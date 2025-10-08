@@ -14,7 +14,7 @@ class RAG:
     def classify_intent(self, query):
         """Classify the intent of the query using gpt-4o-mini."""
         if not self.client:
-            return "rule_reference"  # Fallback if no OpenAI client
+            return "rule_reference"
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -25,7 +25,7 @@ class RAG:
             )
             return response.choices[0].message.content.strip()
         except Exception:
-            return "rule_reference"  # Fallback on error
+            return "rule_reference"
 
     def check_scenario_slots(self, query):
         """Check if scenario-based question has required slots (outs, base state)."""
@@ -38,19 +38,15 @@ class RAG:
 
     def standardize_rule_id(self, doc_id, doc, idmap):
         """Standardize rule ID from idmap and doc (e.g., '2.00' and 'Balk' to 'Rule 2.00 (Balk)')."""
-        # Get rule and rule_sub from idmap
         idx = list(idmap.index).index(int(doc_id.split('_')[-1]) if 'doc_' in doc_id else int(doc_id))
         rule = idmap.iloc[idx].get('rule', '')
         rule_sub = idmap.iloc[idx].get('rule_sub', '')
-        rule_sub = rule_sub.lstrip('0') if rule_sub.startswith('0.') else rule_sub  # Normalize '0.00' to '.00'
+        rule_sub = rule_sub.lstrip('0') if rule_sub.startswith('0.') else rule_sub
         rule_id = f"{rule}{rule_sub}" if rule_sub else rule
-
-        # Get term from doc's define or c_verbatim
         term = doc.get('define', doc.get('c_verbatim', '')).strip()
         if not term:
             term_match = re.search(r'– ([^\.:]+)', doc.get('text', ''))
             term = term_match.group(1).strip() if term_match else ''
-
         return f"Rule {rule_id} ({term})" if term else f"Rule {rule_id}"
 
     def generate_answer(self, query, context, idmap):
@@ -70,35 +66,35 @@ class RAG:
             if missing_slots:
                 return f"Hey coach, I need a bit more info to nail this call! Can you tell me about {', '.join(missing_slots)}? For example, how many outs are there, and who's on base?"
         system_prompt = (
-            "You're a friendly baseball coach answering questions based on the Official Baseball Rulebook. "
-            "Use a clear, conversational tone, as if explaining to a player, parent, or volunteer coach. "
-            "Be enthusiastic, use baseball lingo when appropriate, and make it feel like we're chatting on the diamond! "
-            "Always prioritize fairness, safety, and player development. "
-            "If the question is a rule lookup, cite the exact rule number and term as provided in the context (e.g., Rule 2.00 (Balk)) and paraphrase the rule. Do not alter or invent IDs. "
-            "For philosophical questions, explain the rule's purpose in plain language with exact citations from the context. "
-            "For opinion or storytelling, use teaching examples or admit if it's outside the rulebook, citing rules if applicable. "
-            "For off-topic questions, politely redirect to baseball rules or say it's not covered."
+            "You are UmpGPT, an authoritative but approachable instructor and umpire for Little League Baseball International (LLI). "
+            "Your mission is to give the correct ruling and a brief, clear explanation that a manager can act on immediately. "
+            "Always cite exact sources from the Official Little League Rulebook (e.g., Rule 7.13 NOTE or Rule 6.09(b)). "
+            "NEVER invent a rule or section number. If a rule number is unavailable, cite the section title (e.g., Interference—LL Rulebook). "
+            "Assume Baseball unless Softball is specified. Match the user’s division (Tee Ball, Minors, Majors, etc.) if provided, or default to Majors/Minors. "
+            "Use a professional, confident, and supportive tone, like a trusted umpire at a plate meeting. "
+            "Structure your response with: **Ruling**: One-sentence call (e.g., safe/out). **Why**: Short, plain-English explanation. **Rule References**: Exact rule/section identifiers. **Key Points for Managers**: Bullet points for clarity. **Example**: Practical scenarios. **Division Note**: Clarify if rules differ by division (e.g., Minors vs. Majors). "
+            "For philosophical questions, explain the rule’s purpose with citations. For opinion questions, use teaching examples or admit if outside the rulebook. For off-topic questions, redirect to baseball rules."
         )
         if intent == "rule_reference":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Cite the specific rule number and term exactly as provided in the context (e.g., Rule 2.00 (Balk)) and paraphrase the rule in your answer. Do not alter or invent IDs."
+                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers (e.g., Rule 6.09(b)). **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
             )
         elif intent == "philosophical":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Explain why the rule exists in plain language, citing exact rule numbers and terms from the context (e.g., Rule 2.00 (Balk))."
+                f"Explain the rule’s purpose in plain language with exact rule citations, using the structure: **Ruling**: One-sentence summary. **Why**: Purpose explanation. **Rule References**: Exact citations. **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
             )
         elif intent == "opinion":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Use teaching examples or stories from baseball to answer. If outside the rulebook, admit it but share a relevant case, citing rules if applicable."
+                f"Use teaching examples or stories, admitting if outside the rulebook, with the structure: **Ruling**: One-sentence response. **Why**: Explanation or story. **Rule References**: Cite rules if applicable. **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify if relevant."
             )
         elif intent == "off_topic":
             return (
@@ -109,7 +105,8 @@ class RAG:
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
-                f"Question: {query}"
+                f"Question: {query}\n"
+                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers. **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
             )
         if USE_OPENAI and self.client:
             try:
