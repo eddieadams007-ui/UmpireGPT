@@ -33,6 +33,7 @@ cloudbuild-streamlit.yaml
 .env
 # Explicitly include critical files
 !requirements.txt
+!requirements-backend.txt
 !Dockerfile
 !cloudbuild.yaml
 !src/

@@ -19,6 +19,7 @@ steps:
       - --set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest
       - --port=8000
       - --min-instances=1
+      - --timeout=600s
     env:
       - 'USE_OPENAI=true'
       - 'KB_PATH=data/chunks/rules.chunks.jsonl'
