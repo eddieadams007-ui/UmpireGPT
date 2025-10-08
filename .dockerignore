@@ -3,7 +3,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
 # Ignore local environment and IDE files
 .venv/
 env/
@@ -11,31 +10,30 @@ venv/
 *.code-workspace
 .idea/
 .vscode/
-
 # Ignore Git files
 .git/
 .gitignore
-
 # Ignore build and test artifacts
 build/
 dist/
 *.egg-info/
 *.log
 pytest_cache/
-
 # Ignore temporary files
 *.swp
 *~
 *.bak
-
-# Ignore documentation (optional)
+# Ignore documentation
 *.md
 LICENSE
-
+# Ignore frontend-specific files
+Dockerfile-streamlit
+cloudbuild-streamlit.yaml
+# Ignore environment files (handled by Cloud Run secrets)
+.env
 # Explicitly include critical files
 !requirements.txt
 !Dockerfile
 !cloudbuild.yaml
 !src/
-!data
-!.env  # Include .env for environment variables
+!data/
