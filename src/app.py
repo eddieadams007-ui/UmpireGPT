@@ -80,7 +80,7 @@ if st.session_state.chat_history:
             placeholder.markdown(f"<div class='chat-message bot'>UmpireGPT: {answer}</div>", unsafe_allow_html=True)
 
 # Chat input
-question = st.text_area("Your question:", placeholder="e.g., What is a balk?", height=100, key="question_input")
+question = st.text_area("Your question:", placeholder="e.g., What is a balk?", height=100, key="question_input", clear_on_submit=True)
 
 # Go button
 if st.button("Go", key="go_button"):
@@ -104,7 +104,6 @@ if st.button("Go", key="go_button"):
                     "answer": result["answer"],
                     "displayed": False
                 })
-                st.session_state.question_input = ""  # Clear input
                 st.rerun()  # Refresh to show new message
             except requests.RequestException as e:
                 st.error(f"Uh-oh! Couldn't reach the server: {str(e)}. Try again!")
