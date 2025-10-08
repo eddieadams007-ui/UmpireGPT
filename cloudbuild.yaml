@@ -5,18 +5,18 @@ steps:
     id: pull-base
     waitFor: ['-']
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt-base:v1', '-f', 'Dockerfile.base', '.']
-    id: build-base
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if git diff --name-only HEAD^ HEAD | grep -q Dockerfile.base; then
+          docker build -t gcr.io/$PROJECT_ID/umpiregpt-base:v1 -f Dockerfile.base .
+          docker push gcr.io/$PROJECT_ID/umpiregpt-base:v1
+        else
+          echo "No changes to Dockerfile.base, skipping base image build"
+        fi
+    id: build-and-push-base
     waitFor: ['pull-base']
-    entrypoint: bash
-    args: ['-c', 'if git diff --name-only HEAD^ HEAD | grep -q Dockerfile.base; then exit 0; else exit 1; fi']
-    ignore_failure: true
-  - name: gcr.io/cloud-builders/docker
-    args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt-base:v1']
-    id: push-base
-    waitFor: ['build-base']
-    entrypoint: bash
-    args: ['-c', 'if [ $$? -eq 0 ]; then docker push gcr.io/$PROJECT_ID/umpiregpt-base:v1; else echo "Skipping base image push"; fi']
   - name: gcr.io/cloud-builders/docker
     entrypoint: docker
     args: ['pull', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
@@ -25,7 +25,7 @@ steps:
   - name: gcr.io/cloud-builders/docker
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/umpiregpt:v1', '-f', 'Dockerfile', '.', '--cache-from', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
     id: build-app
-    waitFor: ['push-base', 'pull-app']
+    waitFor: ['build-and-push-base', 'pull-app']
   - name: gcr.io/cloud-builders/docker
     args: ['push', 'gcr.io/$PROJECT_ID/umpiregpt:v1']
     id: push-app
