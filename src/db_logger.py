@@ -4,7 +4,7 @@ import uuid
 import os
 
 class DBLogger:
-    def __init__(self, db_path='/umpiregpt/data/app_data.db'):
+    def __init__(self, db_path=os.getenv('DB_PATH', '/home/eddie_adams007/UmpireGPT/data/app_data.db')):
         self.db_path = db_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._create_table()

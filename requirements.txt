@@ -8,3 +8,4 @@ python-dotenv==1.0.1
 packaging==24.2.0
 streamlit==1.40.0
 requests==2.32.3
+urllib3==2.2.3
