@@ -23,7 +23,17 @@ class RAG:
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "user", "content": f"Classify the intent of this question as 'rule_clarification', 'scenario_based', or 'other'. 'rule_clarification' is for general rule questions (e.g., 'What is the dropped third strike rule?'). 'scenario_based' is for specific game situations involving outs, runners, or umpire calls (e.g., 'With two outs and a runner on first, is the call correct?'). 'other' is for non-rule questions. Question: {question}"}]
+                messages=[{
+                    "role": "user",
+                    "content": f"""
+Classify the intent of this question as 'rule_clarification', 'scenario_based', or 'other'.
+- 'rule_clarification': Questions asking for general rule explanations (e.g., 'What is the dropped third strike rule?').
+- 'scenario_based': Questions describing specific game situations with details like outs, runners, or umpire calls (e.g., 'With two outs and a runner on first, is the call correct?').
+- 'other': Non-rule questions (e.g., 'What is the time limit for a game?').
+Return only the intent name.
+Question: {question}
+"""
+                }]
             )
             intent = response.choices[0].message.content.strip().lower()
             return intent if intent in ['rule_clarification', 'scenario_based', 'other'] else 'other'
@@ -35,11 +45,11 @@ class RAG:
         required_slots = ['outs', 'runners', 'call_made']
         present_slots = []
         question_lower = question.lower()
-        if 'out' in question_lower or 'outs' in question_lower:
+        if any(keyword in question_lower for keyword in ['out ', 'outs ', 'no outs', 'one out', 'two outs']):
             present_slots.append('outs')
-        if 'runner' in question_lower or 'base' in question_lower or 'on first' in question_lower or 'on second' in question_lower or 'on third' in question_lower:
+        if any(keyword in question_lower for keyword in ['runner', 'runners', 'on first', 'on second', 'on third', 'bases loaded', 'base']):
             present_slots.append('runners')
-        if 'call' in question_lower or 'umpire' in question_lower or 'correct' in question_lower or 'right' in question_lower or 'wrong' in question_lower:
+        if any(keyword in question_lower for keyword in ['call ', 'umpire', 'correct', 'right', 'wrong', 'called']):
             present_slots.append('call_made')
         missing_slots = [slot for slot in required_slots if slot not in present_slots]
         return missing_slots
