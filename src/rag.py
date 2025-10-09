@@ -1,124 +1,45 @@
 import os
-import json
-import re
-from .config import OPENAI_API_KEY, USE_OPENAI
 from openai import OpenAI
 
 class RAG:
     def __init__(self, data_path, index_path, meta):
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.data_path = data_path
         self.index_path = index_path
         self.meta = meta
-        self.client = OpenAI(api_key=OPENAI_API_KEY) if USE_OPENAI else None
 
-    def classify_intent(self, query):
-        """Classify the intent of the query using gpt-4o-mini."""
-        if not self.client:
-            return "rule_reference"
+    def generate_answer(self, question, context, idmap):
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a baseball coach classifying user questions into one of these intents: 'scenario_based' (describes a game situation needing outs/base state), 'rule_reference' (asks for specific rule), 'philosophical' (asks why a rule exists), 'opinion' (asks for stories or opinions), 'off_topic' (unrelated to baseball rules). Respond with only the intent name."},
-                    {"role": "user", "content": query}
-                ]
+                messages=[{"role": "user", "content": f"Question: {question}\nContext: {context}"}]
             )
-            return response.choices[0].message.content.strip()
-        except Exception:
-            return "rule_reference"
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"DEBUG: Failed to generate answer: {e}")
+            raise
 
-    def check_scenario_slots(self, query):
-        """Check if scenario-based question has required slots (outs, base state)."""
-        required_slots = ["outs", "base state"]
-        missing_slots = []
-        for slot in required_slots:
-            if slot not in query.lower():
-                missing_slots.append(slot)
+    def classify_intent(self, question):
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": f"Classify the intent of this question as 'rule_clarification', 'scenario_based', or 'other'. 'rule_clarification' is for general rule questions (e.g., 'What is the dropped third strike rule?'). 'scenario_based' is for specific game situations involving outs, runners, or umpire calls (e.g., 'With two outs and a runner on first, is the call correct?'). 'other' is for non-rule questions. Question: {question}"}]
+            )
+            intent = response.choices[0].message.content.strip().lower()
+            return intent if intent in ['rule_clarification', 'scenario_based', 'other'] else 'other'
+        except Exception as e:
+            print(f"DEBUG: Failed to classify intent: {e}")
+            return 'other'
+
+    def check_scenario_slots(self, question):
+        required_slots = ['outs', 'runners', 'call_made']
+        present_slots = []
+        question_lower = question.lower()
+        if 'out' in question_lower or 'outs' in question_lower:
+            present_slots.append('outs')
+        if 'runner' in question_lower or 'base' in question_lower or 'on first' in question_lower or 'on second' in question_lower or 'on third' in question_lower:
+            present_slots.append('runners')
+        if 'call' in question_lower or 'umpire' in question_lower or 'correct' in question_lower or 'right' in question_lower or 'wrong' in question_lower:
+            present_slots.append('call_made')
+        missing_slots = [slot for slot in required_slots if slot not in present_slots]
         return missing_slots
-
-    def standardize_rule_id(self, doc_id, doc, idmap):
-        """Standardize rule ID from idmap and doc (e.g., '2.00' and 'Balk' to 'Rule 2.00 (Balk)')."""
-        idx = list(idmap.index).index(int(doc_id.split('_')[-1]) if 'doc_' in doc_id else int(doc_id))
-        rule = idmap.iloc[idx].get('rule', '')
-        rule_sub = idmap.iloc[idx].get('rule_sub', '')
-        rule_sub = rule_sub.lstrip('0') if rule_sub.startswith('0.') else rule_sub
-        rule_id = f"{rule}{rule_sub}" if rule_sub else rule
-        term = doc.get('define', doc.get('c_verbatim', '')).strip()
-        if not term:
-            term_match = re.search(r'– ([^\.:]+)', doc.get('text', ''))
-            term = term_match.group(1).strip() if term_match else ''
-        return f"Rule {rule_id} ({term})" if term else f"Rule {rule_id}"
-
-    def generate_answer(self, query, context, idmap):
-        if not context:
-            return "Hey there! I couldn't find any relevant rules in the rulebook for that one. Can you clarify or ask something else?"
-        if not os.path.exists(self.data_path) or not os.path.exists(self.index_path):
-            return "Oops, something went wrong—couldn't find the rulebook data. Let's try another question!"
-        context_with_ids = []
-        for doc in context:
-            doc_id = idmap.get(list(idmap.index).index(int(doc['id'].split('_')[-1]) if 'doc_' in doc['id'] else int(doc['id'])), doc['id'])
-            standardized_id = self.standardize_rule_id(doc_id, doc, idmap)
-            context_with_ids.append(f"{standardized_id}: {doc['text']}")
-        context_text = " ".join(context_with_ids)
-        intent = self.classify_intent(query)
-        if intent == "scenario_based":
-            missing_slots = self.check_scenario_slots(query)
-            if missing_slots:
-                return f"Hey coach, I need a bit more info to nail this call! Can you tell me about {', '.join(missing_slots)}? For example, how many outs are there, and who's on base?"
-        system_prompt = (
-            "You are UmpGPT, an authoritative but approachable instructor and umpire for Little League Baseball International (LLI). "
-            "Your mission is to give the correct ruling and a brief, clear explanation that a manager can act on immediately. "
-            "Always cite exact sources from the Official Little League Rulebook (e.g., Rule 7.13 NOTE or Rule 6.09(b)). "
-            "NEVER invent a rule or section number. If a rule number is unavailable, cite the section title (e.g., Interference—LL Rulebook). "
-            "Assume Baseball unless Softball is specified. Match the user’s division (Tee Ball, Minors, Majors, etc.) if provided, or default to Majors/Minors. "
-            "Use a professional, confident, and supportive tone, like a trusted umpire at a plate meeting. "
-            "Structure your response with: **Ruling**: One-sentence call (e.g., safe/out). **Why**: Short, plain-English explanation. **Rule References**: Exact rule/section identifiers. **Key Points for Managers**: Bullet points for clarity. **Example**: Practical scenarios. **Division Note**: Clarify if rules differ by division (e.g., Minors vs. Majors). "
-            "For philosophical questions, explain the rule’s purpose with citations. For opinion questions, use teaching examples or admit if outside the rulebook. For off-topic questions, redirect to baseball rules."
-        )
-        if intent == "rule_reference":
-            prompt = (
-                f"{system_prompt}\n\n"
-                f"Here's the relevant rulebook context: {context_text}\n\n"
-                f"Question: {query}\n"
-                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers (e.g., Rule 6.09(b)). **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
-            )
-        elif intent == "philosophical":
-            prompt = (
-                f"{system_prompt}\n\n"
-                f"Here's the relevant rulebook context: {context_text}\n\n"
-                f"Question: {query}\n"
-                f"Explain the rule’s purpose in plain language with exact rule citations, using the structure: **Ruling**: One-sentence summary. **Why**: Purpose explanation. **Rule References**: Exact citations. **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
-            )
-        elif intent == "opinion":
-            prompt = (
-                f"{system_prompt}\n\n"
-                f"Here's the relevant rulebook context: {context_text}\n\n"
-                f"Question: {query}\n"
-                f"Use teaching examples or stories, admitting if outside the rulebook, with the structure: **Ruling**: One-sentence response. **Why**: Explanation or story. **Rule References**: Cite rules if applicable. **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify if relevant."
-            )
-        elif intent == "off_topic":
-            return (
-                "Hey there, that’s a bit outside the strike zone for the rulebook! "
-                "Let’s stick to baseball rules or scenarios—got a question about a call or situation on the field?"
-            )
-        else:
-            prompt = (
-                f"{system_prompt}\n\n"
-                f"Here's the relevant rulebook context: {context_text}\n\n"
-                f"Question: {query}\n"
-                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers. **Key Points for Managers**: Bullet points. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
-            )
-        if USE_OPENAI and self.client:
-            try:
-                response = self.client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                return f"Oops, something went wrong with the rulebook lookup: {str(e)}. Try another question!"
-        else:
-            return f"Hey there! Based on the rulebook, here's what I found: {context_text}"
