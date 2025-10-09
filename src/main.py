@@ -125,6 +125,7 @@ async def validate_call(question: str):
     api_used = "OpenAI" if USE_OPENAI and context else "Cached"
     tokens_used = 0  # Placeholder; update with actual OpenAI token count if available
     
+    # Log interaction
     logger.log_interaction(
         query_text=query_text,
         division=division,
