@@ -14,7 +14,9 @@ class RAG:
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": f"Question: {question}\nContext: {context}"}]
             )
-            return response.choices[0].message.content
+            answer = response.choices[0].message.content
+            tokens_used = response.usage.total_tokens if response.usage else 0
+            return answer, tokens_used
         except Exception as e:
             print(f"DEBUG: Failed to generate answer: {e}")
             raise
