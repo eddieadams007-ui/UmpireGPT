@@ -40,7 +40,7 @@ def export_to_csv():
     _create_table()  # Ensure table exists
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM interactions")
+    cursor.execute("SELECT * FROM interactions ORDER BY id DESC")
     rows = cursor.fetchall()
     with open(CSV_PATH, 'w') as f:
         f.write("id,query_text,division,response,timestamp,session_id,response_time,query_type,api_used,tokens_used,thumbs_up,thumbs_down,feedback_text,rule_reference\n")
