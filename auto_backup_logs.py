@@ -7,7 +7,7 @@ import sys
 # GCS bucket for backups
 BUCKET = "umpgpt_cloudbuild"
 BACKUP_FOLDER = "backups"
-DB_PATH = "logs/app_data.db"
+DB_PATH = "logs/app_data_dev.db"
 CSV_PATH = "logs/interactions.csv"
 
 def export_to_csv():
