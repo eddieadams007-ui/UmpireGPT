@@ -7,11 +7,37 @@ import sys
 # GCS bucket for backups
 BUCKET = "umpgpt_cloudbuild"
 BACKUP_FOLDER = "backups"
-DB_PATH = "logs/app_data_dev.db"
+DB_PATH = "logs/app_data.db"
 CSV_PATH = "logs/interactions.csv"
+
+def _create_table():
+    """Create interactions table if not exists."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query_text TEXT,
+            division TEXT,
+            response TEXT,
+            timestamp TEXT,
+            session_id TEXT,
+            response_time REAL,
+            query_type TEXT,
+            api_used TEXT,
+            tokens_used INTEGER,
+            thumbs_up INTEGER,
+            thumbs_down INTEGER,
+            feedback_text TEXT,
+            rule_reference TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 def export_to_csv():
     """Export DB to CSV."""
+    _create_table()  # Ensure table exists
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM interactions")
