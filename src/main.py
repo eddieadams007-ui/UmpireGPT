@@ -40,7 +40,7 @@ except Exception as e:
 os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
 
 @app.get("/query")
-async def query_rule(question: str):
+async def query_rule(question: str, thumbs_up: int = None, thumbs_down: int = None, feedback_text: str = None):
     print(f"DEBUG: Received question: {question}")
     if not question:
         raise HTTPException(status_code=400, detail="No question provided")
@@ -52,6 +52,57 @@ async def query_rule(question: str):
     except Exception as e:
         print(f"DEBUG: Failed to load idmap: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to load idmap: {e}")
+   
+    print("DEBUG: Classifying intent")
+    try:
+        intent = rag.classify_intent(question)
+        print(f"DEBUG: Intent classified: {intent}")
+    except Exception as e:
+        print(f"DEBUG: Failed to classify intent: {e}")
+        intent = "other"
+   
+    # Extract division and session_id
+    division = "All"
+    session_id = str(uuid.uuid4())
+    query_text = question
+    if "Division:" in question:
+        parts = question.split("\n")
+        for part in parts:
+            if part.startswith("Division:"):
+                division = part.replace("Division:", "").strip()
+                query_text = "\n".join([p for p in parts if not p.startswith("Division:")]).strip()
+   
+    if intent == "scenario_based":
+        print("DEBUG: Checking scenario slots")
+        try:
+            missing_slots = rag.check_scenario_slots(query_text)
+        except Exception as e:
+            print(f"DEBUG: Failed to check scenario slots: {e}")
+            missing_slots = []
+        
+        if missing_slots:
+            answer = f"Hey coach, I need a bit more info to nail this call! Can you tell me about {', '.join(missing_slots)}? For example, how many outs are there, and who's on base?"
+            response_time = time.time() - start_time
+            print(f"DEBUG: Logging interaction: query_type={intent}, api_used=Cached")
+            try:
+                logger.log_interaction(
+                    query_text=query_text,
+                    division=division,
+                    response=answer,
+                    session_id=session_id,
+                    response_time=response_time,
+                    query_type=intent,
+                    api_used="Cached",
+                    tokens_used=0,
+                    thumbs_up=thumbs_up,
+                    thumbs_down=thumbs_down,
+                    feedback_text=feedback_text,
+                    rule_reference=None
+                )
+                print("DEBUG: Interaction logged")
+            except Exception as e:
+                print(f"DEBUG: Failed to log interaction: {e}")
+            return {"question": question, "answer": answer}
    
     print("DEBUG: Retrieving context")
     try:
@@ -69,25 +120,7 @@ async def query_rule(question: str):
         raise HTTPException(status_code=500, detail=f"Failed to generate answer: {e}")
    
     response_time = time.time() - start_time
-   
-    # Extract division and session_id
-    division = "All"
-    session_id = str(uuid.uuid4())
-    query_text = question
-    if "Division:" in question:
-        parts = question.split("\n")
-        for part in parts:
-            if part.startswith("Division:"):
-                division = part.replace("Division:", "").strip()
-                query_text = "\n".join([p for p in parts if not p.startswith("Division:")]).strip()
-   
-    print("DEBUG: Classifying intent")
-    try:
-        query_type = rag.classify_intent(query_text)
-    except Exception as e:
-        print(f"DEBUG: Failed to classify intent: {e}")
-        query_type = "Other"
-   
+    query_type = intent
     api_used = "OpenAI" if USE_OPENAI and context else "Cached"
     print(f"DEBUG: Logging interaction: query_type={query_type}, api_used={api_used}, tokens_used={tokens_used}")
     try:
@@ -100,6 +133,9 @@ async def query_rule(question: str):
             query_type=query_type,
             api_used=api_used,
             tokens_used=tokens_used,
+            thumbs_up=thumbs_up,
+            thumbs_down=thumbs_down,
+            feedback_text=feedback_text,
             rule_reference=None
         )
         print("DEBUG: Interaction logged")
@@ -109,7 +145,7 @@ async def query_rule(question: str):
     return {"question": question, "answer": answer if answer else "Sorry, I couldn't find a rule matching your query."}
 
 @app.get("/validate_call")
-async def validate_call(question: str):
+async def validate_call(question: str, thumbs_up: int = None, thumbs_down: int = None, feedback_text: str = None):
     print(f"DEBUG: Received validate_call question: {question}")
     if not question:
         raise HTTPException(status_code=400, detail="No question provided")
@@ -122,21 +158,13 @@ async def validate_call(question: str):
         print(f"DEBUG: Failed to load idmap: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to load idmap: {e}")
    
-    print("DEBUG: Retrieving context")
-    try:
-        context = retriever.retrieve(question)
-        print(f"DEBUG: Retrieved {len(context)} docs")
-    except Exception as e:
-        print(f"DEBUG: Failed to retrieve context: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve context: {e}")
-   
     print("DEBUG: Classifying intent")
     try:
         intent = rag.classify_intent(question)
         print(f"DEBUG: Intent classified: {intent}")
     except Exception as e:
         print(f"DEBUG: Failed to classify intent: {e}")
-        intent = "Other"
+        intent = "other"
    
     # Extract division and session_id
     division = "All"
@@ -163,6 +191,9 @@ async def validate_call(question: str):
                 query_type=intent,
                 api_used="Cached",
                 tokens_used=0,
+                thumbs_up=thumbs_up,
+                thumbs_down=thumbs_down,
+                feedback_text=feedback_text,
                 rule_reference=None
             )
             print("DEBUG: Interaction logged")
@@ -172,13 +203,13 @@ async def validate_call(question: str):
    
     print("DEBUG: Checking scenario slots")
     try:
-        missing_slots = rag.check_scenario_slots(question)
+        missing_slots = rag.check_scenario_slots(query_text)
     except Exception as e:
         print(f"DEBUG: Failed to check scenario slots: {e}")
         missing_slots = []
    
     if missing_slots:
-        answer = f"Hey coach, I need a bit more info to validate this call! Can you tell me about {', '.join(missing_slots)}? For example, how many outs are there, and who's on base?"
+        answer = f"Hey coach, I need a bit more info to nail this call! Can you tell me about {', '.join(missing_slots)}? For example, how many outs are there, and who's on base?"
         response_time = time.time() - start_time
         print(f"DEBUG: Logging interaction: query_type={intent}, api_used=Cached")
         try:
@@ -191,12 +222,23 @@ async def validate_call(question: str):
                 query_type=intent,
                 api_used="Cached",
                 tokens_used=0,
+                thumbs_up=thumbs_up,
+                thumbs_down=thumbs_down,
+                feedback_text=feedback_text,
                 rule_reference=None
             )
             print("DEBUG: Interaction logged")
         except Exception as e:
             print(f"DEBUG: Failed to log interaction: {e}")
         return {"question": question, "answer": answer}
+   
+    print("DEBUG: Retrieving context")
+    try:
+        context = retriever.retrieve(question)
+        print(f"DEBUG: Retrieved {len(context)} docs")
+    except Exception as e:
+        print(f"DEBUG: Failed to retrieve context: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve context: {e}")
    
     print("DEBUG: Generating answer")
     try:
@@ -219,6 +261,9 @@ async def validate_call(question: str):
             query_type=query_type,
             api_used=api_used,
             tokens_used=tokens_used,
+            thumbs_up=thumbs_up,
+            thumbs_down=thumbs_down,
+            feedback_text=feedback_text,
             rule_reference=None
         )
         print("DEBUG: Interaction logged")
