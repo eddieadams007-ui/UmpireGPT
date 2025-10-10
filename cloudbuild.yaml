@@ -29,7 +29,7 @@ steps:
     args:
       - run
       - deploy
-      - umpiregpt-stable
+      - umpiregpt-production
       - --image=gcr.io/umpgpt/umpiregpt:v1
       - --region=us-central1
       - --platform=managed
@@ -37,8 +37,8 @@ steps:
       - --port=8000
       - --min-instances=1
       - --set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest
-      - --tag=stable
-    id: deploy-stable
+      - --tag=production
+    id: deploy-production
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:

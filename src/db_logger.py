@@ -1,53 +1,57 @@
 import sqlite3
-import datetime
-import uuid
 import os
+from datetime import datetime
+import uuid
 
 class DBLogger:
-    def __init__(self, db_path=os.getenv('DB_PATH', '/home/eddie_adams007/UmpireGPT/data/app_data.db')):
-        self.db_path = db_path
+    def __init__(self):
+        self.db_path = os.path.join("logs", "app_data.db")
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._create_table()
 
     def _create_table(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS interactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                query_text TEXT NOT NULL,
-                division TEXT NOT NULL,
-                response TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                session_id TEXT NOT NULL,
-                response_time FLOAT NOT NULL,
-                query_type TEXT NOT NULL,
-                api_used TEXT NOT NULL,
-                tokens_used INTEGER NOT NULL,
-                rule_reference TEXT,
-                thumbs_up BOOLEAN,
-                thumbs_down BOOLEAN,
-                feedback_text TEXT
-            )
-        ''')
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS interactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query_text TEXT,
+                    division TEXT,
+                    response TEXT,
+                    timestamp TEXT,
+                    session_id TEXT,
+                    response_time REAL,
+                    query_type TEXT,
+                    api_used TEXT,
+                    tokens_used INTEGER,
+                    thumbs_up INTEGER,
+                    thumbs_down INTEGER,
+                    feedback_text TEXT,
+                    rule_reference TEXT
+                )
+            ''')
+            conn.commit()
 
-    def log_interaction(self, query_text, division, response, session_id, response_time, query_type, api_used, tokens_used, rule_reference=None):
-        timestamp = datetime.datetime.now().isoformat()
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
+    def log_interaction(self, query_text, division, response, session_id, response_time, query_type, api_used, tokens_used, thumbs_up=None, thumbs_down=None, feedback_text=None, rule_reference=None):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO interactions (
-                    query_text, division, response, timestamp, session_id, 
-                    response_time, query_type, api_used, tokens_used, rule_reference
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (query_text, division, response, timestamp, session_id, 
-                  response_time, query_type, api_used, tokens_used, rule_reference))
+                    query_text, division, response, timestamp, session_id, response_time,
+                    query_type, api_used, tokens_used, thumbs_up, thumbs_down, feedback_text, rule_reference
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                query_text, division, response, datetime.utcnow().isoformat(), session_id, response_time,
+                query_type, api_used, tokens_used, thumbs_up, thumbs_down, feedback_text, rule_reference
+            ))
             conn.commit()
-        except Exception as e:
-            print(f"Error logging interaction: {e}")
-        finally:
-            conn.close()
+
+    def export_to_csv(self, output_path="logs/interactions.csv"):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM interactions")
+            rows = cursor.fetchall()
+            with open(output_path, 'w') as f:
+                f.write("id,query_text,division,response,timestamp,session_id,response_time,query_type,api_used,tokens_used,thumbs_up,thumbs_down,feedback_text,rule_reference\n")
+                for row in rows:
+                    f.write(','.join(str(x) if x is not None else '' for x in row) + '\n')

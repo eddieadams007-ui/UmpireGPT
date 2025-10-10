@@ -19,11 +19,16 @@ class RAG:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a baseball coach classifying user questions into one of these intents: 'scenario_based' (describes a game situation needing outs/base state), 'rule_reference' (asks for specific rule), 'philosophical' (asks why a rule exists), 'opinion' (asks for stories or opinions), 'off_topic' (unrelated to baseball rules). Respond with only the intent name."},
+                    {"role": "system", "content": "You are a baseball coach classifying user questions into one of these intents: 'scenario_based' (describes a game situation with outs, runners, or umpire calls, e.g., 'two outs, runner on first, dropped third strike'), 'rule_reference' (asks for a specific rule definition, e.g., 'What is the infield fly rule?'), 'philosophical' (asks why a rule exists, e.g., 'Why do we have the infield fly rule?'), 'opinion' (asks for stories or opinions), 'off_topic' (unrelated to baseball rules). Respond with only the intent name."},
                     {"role": "user", "content": query}
                 ]
             )
-            return response.choices[0].message.content.strip()
+            intent = response.choices[0].message.content.strip()
+            # Fallback check for scenario_based
+            query_lower = query.lower()
+            if any(keyword in query_lower for keyword in ['out ', 'outs ', 'no outs', 'one out', 'two outs', 'runner', 'runners', 'on first', 'on second', 'on third', 'bases loaded', 'call ', 'umpire', 'correct', 'right', 'wrong', 'called']):
+                intent = "scenario_based"
+            return intent
         except Exception:
             return "rule_reference"
 
@@ -80,8 +85,9 @@ class RAG:
             "NEVER invent a rule or section number. If a rule number is unavailable, cite the section title (e.g., Interference—LL Rulebook). "
             "Assume Baseball unless Softball is specified. Match the user’s division (Tee Ball, Minors, Majors, etc.) if provided, or default to Majors/Minors. "
             "Use a professional, confident, and supportive tone, like a trusted umpire at a plate meeting. "
-            "Structure your response with: **Ruling**: One-sentence call (e.g., safe/out). **Why**: Short, plain-English explanation. **Rule References**: Exact rule/section identifiers. **Key Conditions Recap**: Bullet points for clarity. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenarios. **Division Note**: Clarify if rules differ by division (e.g., Minors vs. Majors). "
-            "For philosophical questions, explain the rule’s purpose with citations. For opinion questions, use teaching examples or admit if outside the rulebook. For off-topic questions, redirect to baseball rules."
+            "Structure your response with: **Ruling**: One-sentence call (e.g., safe/out). **Why**: Short, plain-English explanation. **Rule References**: Exact rule/section identifiers. **Key Conditions Recap**: Bullet points listing critical conditions. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenarios. **Division Note**: Clarify if rules differ by division (e.g., Minors vs. Majors). "
+            "For philosophical questions, explain the rule’s purpose with citations. For opinion questions, use teaching examples or admit if outside the rulebook. For off-topic questions, redirect to baseball rules. "
+            "For scenario-based queries, ensure rulings are precise, especially for dropped third strike scenarios (Rule 6.09(b)): with two outs, the batter is not automatically out and can attempt to reach first base if the catcher drops the third strike, regardless of runners on base."
         )
         
         if intent == "rule_reference":
@@ -89,21 +95,21 @@ class RAG:
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers (e.g., Rule 6.09(b)). **Key Conditions Recap**: Bullet points for clarity. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
+                f"Provide a structured response with: **Ruling**: One-sentence definition or call. **Why**: Brief explanation of the rule. **Rule References**: Exact rule numbers (e.g., Rule 2.00, 6.05(d)). **Key Conditions Recap**: Bullet points listing conditions. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenario. **Division Note**: Clarify division-specific rules if applicable."
             )
         elif intent == "philosophical":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Explain the rule’s purpose in plain language with exact rule citations, using the structure: **Ruling**: One-sentence summary. **Why**: Purpose explanation. **Rule References**: Exact citations. **Key Conditions Recap**: Bullet points for clarity. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
+                f"Explain the rule’s purpose in plain language with exact rule citations, using the structure: **Ruling**: One-sentence summary. **Why**: Purpose explanation. **Rule References**: Exact citations (e.g., Rule 2.00, 6.05(d)). **Key Conditions Recap**: Bullet points listing conditions. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenario. **Division Note**: Clarify division-specific rules if applicable."
             )
         elif intent == "opinion":
             prompt = (
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Use teaching examples or stories, admitting if outside the rulebook, with the structure: **Ruling**: One-sentence response. **Why**: Explanation or story. **Rule References**: Cite rules if applicable. **Key Conditions Recap**: Bullet points for clarity. **Live/Dead Ball**: Status of the ball if relevant. **Example**: Practical scenarios. **Division Note**: Clarify if relevant."
+                f"Use teaching examples or stories, admitting if outside the rulebook, with the structure: **Ruling**: One-sentence response. **Why**: Explanation or story. **Rule References**: Cite rules if applicable. **Key Conditions Recap**: Bullet points if relevant. **Live/Dead Ball**: Status if relevant. **Example**: Practical scenario. **Division Note**: Clarify if relevant."
             )
         elif intent == "off_topic":
             return (
@@ -115,7 +121,7 @@ class RAG:
                 f"{system_prompt}\n\n"
                 f"Here's the relevant rulebook context: {context_text}\n\n"
                 f"Question: {query}\n"
-                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers. **Key Conditions Recap**: Bullet points for clarity. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
+                f"Provide a structured response with: **Ruling**: One-sentence call. **Why**: Brief explanation. **Rule References**: Exact rule numbers (e.g., Rule 2.00, 6.05(d)). **Key Conditions Recap**: Bullet points listing conditions. **Live/Dead Ball**: Status of the ball. **Example**: Practical scenarios. **Division Note**: Clarify division-specific rules if applicable."
             )
         
         if USE_OPENAI and self.client:
