@@ -1,7 +1,7 @@
 import os
 import sqlite3
-import subprocess
 from datetime import datetime
+from google.cloud import storage
 import sys
 
 # GCS bucket for backups
@@ -50,11 +50,14 @@ def export_to_csv():
     print(f"Exported {len(rows)} rows to {CSV_PATH}")
 
 def upload_to_gcs():
-    """Upload CSV to GCS."""
+    """Upload CSV to GCS using Python client."""
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    gcs_path = f"gs://{BUCKET}/{BACKUP_FOLDER}/interactions-{timestamp}.csv"
-    subprocess.run(["gsutil", "cp", CSV_PATH, gcs_path], check=True)
-    print(f"Uploaded to {gcs_path}")
+    gcs_path = f"{BACKUP_FOLDER}/interactions-{timestamp}.csv"
+    client = storage.Client()
+    bucket = client.bucket(BUCKET)
+    blob = bucket.blob(gcs_path)
+    blob.upload_from_filename(CSV_PATH)
+    print(f"Uploaded to gs://{BUCKET}/{gcs_path}")
 
 if __name__ == "__main__":
     try:
