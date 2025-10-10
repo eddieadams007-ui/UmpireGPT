@@ -1,9 +1,9 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['pull', 'gcr.io/umpgpt/umpiregpt-base:v1']
+    args: ['pull', 'gcr.io/$_PROJECT_ID/umpiregpt-base:v1']
     id: pull-base
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['pull', 'gcr.io/umpgpt/umpiregpt:v1']
+    args: ['pull', 'gcr.io/$_PROJECT_ID/umpiregpt:v1']
     id: pull-app
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: '/bin/sh'
@@ -12,17 +12,17 @@ steps:
       - |
         if git diff HEAD^ HEAD --name-only | grep -E '^(Dockerfile.base|requirements-backend.txt)$'; then
           echo "Changes detected in Dockerfile.base or requirements-backend.txt, rebuilding base image"
-          docker build -t gcr.io/umpgpt/umpiregpt-base:v1 -f Dockerfile.base .
-          docker push gcr.io/umpgpt/umpiregpt-base:v1
+          docker build -t gcr.io/$_PROJECT_ID/umpiregpt-base:v1 -f Dockerfile.base .
+          docker push gcr.io/$_PROJECT_ID/umpiregpt-base:v1
         else
           echo "No changes to Dockerfile.base or requirements-backend.txt, skipping base image build"
         fi
     id: build-and-push-base
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/umpgpt/umpiregpt:v1', '.']
+    args: ['build', '-t', 'gcr.io/$_PROJECT_ID/umpiregpt:v1', '.']
     id: build-app
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/umpgpt/umpiregpt:v1']
+    args: ['push', 'gcr.io/$_PROJECT_ID/umpiregpt:v1']
     id: push-app
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -30,7 +30,7 @@ steps:
       - run
       - deploy
       - umpiregpt-production
-      - --image=gcr.io/umpgpt/umpiregpt:v1
+      - --image=gcr.io/$_PROJECT_ID/umpiregpt:v1
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
@@ -45,7 +45,7 @@ steps:
       - run
       - deploy
       - umpiregpt-dev
-      - --image=gcr.io/umpgpt/umpiregpt:v1
+      - --image=gcr.io/$_PROJECT_ID/umpiregpt:v1
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
